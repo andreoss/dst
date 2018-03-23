@@ -10,11 +10,9 @@
 
 #include "main.h"
 #include <assert.h>
-#include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <check.h>
 
 #define POWER_SUPPLY "/sys/class/power_supply/"
 
@@ -33,7 +31,7 @@ typedef struct {
 
 void on_open(uv_fs_t *req);
 
-Power *power_new(uv_loop_t *loop);
+Power *power_new();
 
 void power_destroy(Power *p);
 

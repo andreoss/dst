@@ -1,25 +1,9 @@
-set(LIB_SOURCES
-  power.c
-  x.c
-)
-
-set(HEADERS
-  ${CONFIG_HEADER}
-  power.h
-  x.h
-)
-
-set(MAIN_SOURCES
-  main.c
-)
-
-add_library(power STATIC ${LIB_SOURCES} ${HEADERS})
-add_executable(main ${HEADERS} ${MAIN_SOURCES})
-target_link_libraries(main power X11 uv xkbfile)
-
-install(TARGETS power
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
-
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/power.h DESTINATION include)
+add_library(x       OBJECT x.c x.h)
+add_library(power   OBJECT power.c power.h)
+add_library(report  OBJECT report.c report.h)
+add_library(context OBJECT context.c context.h)
+add_library(load    OBJECT load.c load.h)
+add_library(io      OBJECT io.c io.h)
+add_executable(dst main.c main.h)
+target_link_libraries(dst power report context x X11 uv xkbfile load)
+install(TARGETS dst RUNTIME DESTINATION bin)
