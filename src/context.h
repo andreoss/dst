@@ -1,0 +1,17 @@
+#pragma once
+#include <stddef.h>
+
+enum { POW = 0, X11 = 1, REP = 2, LA = 3, CONTEXT_SIZE = 4 };
+
+typedef void    (callback_t) (void *);
+
+typedef struct Context Context;
+
+Context        *context_new(size_t size);
+
+void           *context_get(Context * ctx, size_t pos);
+void            context_put(Context * ctx, size_t pos, void *ptr);
+void            context_destroy(Context * ctx);
+
+void            context_putw(Context * ctx, size_t pos, void *ptr,
+			     callback_t * callback);

@@ -1,161 +1,173 @@
-#include <uv.h>
-#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <uv.h>
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/inotify.h>
-#include <unistd.h>
-
+#include "context.h"
+#include "load.h"
 #include "main.h"
-#include "x.h"
 #include "power.h"
-void report_new(Report *rep) {
-  rep->current = calloc(sizeof(char), 100);
-  rep->pending = calloc(sizeof(char), 100);
+#include "report.h"
+#include "x.h"
+
+static void
+destroy_x(void *ptr)
+{
+    x_close(ptr);
 }
 
-void report_destroy(Report *rep) {
-  free(rep->current);
-  free(rep->pending);
+static void
+destroy_power(void *ptr)
+{
+    power_destroy(ptr);
 }
 
-int report_unsync(Report *rep) {
-  return strcmp(rep->current, rep->pending)!=0;
-}
-static Report report;
-static Load load;
-static char *status;
-
-void load_sync() {
-  static double loadavg[3];
-  uv_loadavg(loadavg);
-  load._1m = loadavg[0];
-  load._5m = loadavg[1];
-  load._15m = loadavg[2];
+static void
+destroy_report(void *ptr)
+{
+    report_destroy(ptr);
 }
 
-void report_pop(Report *report) {
-  memmove(report->current, report->pending, 100);
+static void
+destroy_load(void *ptr)
+{
+    load_destroy(ptr);
 }
 
-void update_status(X *x, Report *report) {
-  if (report_unsync(report)) {
-    report_pop(report);
-    fprintf(stdout, "%s\n", report->current);
-    x_setname(x, report->current);
-  }
-}
-int loadcmp(Load *load, double tt) {
-  return load->_1m > tt || load->_5m > tt || load->_15m > tt;
+void
+update_status(X * x, Report * report)
+{
+    if (report_is_unsynced(report)) {
+	report_pop(report);
+	x_setname(x, report_current(report));
+    }
 }
 
+void
+update_root(uv_timer_t * handle)
+{
+    char            bat[128];
+    char            buf[512];
+    char            la[96];
+    char            layout[64];
+    Context        *ctx = handle->data;
+    X              *x = context_get(ctx, X11);
+    Power          *pow = context_get(ctx, POW);
+    Report         *report = context_get(ctx, REP);
+    Load           *load = context_get(ctx, LA);
 
-void update_root(uv_timer_t *handle) {
-  X *x = (X*)(((void**)handle->data)[0]);
-  //Power *pow = (Power*)((((void**)handle->data)[1]));
-  //assert(pow);
-  if (loadcmp(&load, 0.5)) {
-    sprintf(report.pending, "%0.2f %0.2f %0.2f %s", load._1m, load._5m,
-            load._15m, x->xkb_layout);
-  } else {
-    sprintf(report.pending, "%s", x->xkb_layout);
-  }
-  update_status((X*)handle->data, &report);
+    load_str(load, la, sizeof(la));
+    power_str(pow, bat, sizeof(bat));
+    snprintf(layout, sizeof(layout), "%s", x->xkb_layout);
+    snprintf(buf, sizeof(buf), "%s | %s %s", bat, la, layout);
+    report_pend(report, buf);
+    update_status(x, report);
 }
 
-void update_layout(uv_timer_t *handle) {
-  x_update_layout((X*)handle->data);
+void
+update_on_timer(uv_timer_t * handle)
+{
+    Context        *ctx = handle->data;
+    x_update_layout(context_get(ctx, X11));
 }
 
+void
+signal_cb(uv_signal_t * handle, int signum)
+{
+    Context        *ctx = handle->data;
+    X              *x = context_get(ctx, X11);
 
-void close_signal(uv_handle_t *handle) {
-  UNUSED(handle);
-  printf("bye...\n");
+    if (signum == SIGHUP) {
+	x_update_layout(x);
+	return;
+    }
+    x_setname(x, "");
+    uv_stop(handle->loop);
 }
 
-void signal_cb(uv_signal_t *handle, int signum) {
-  UNUSED(handle);
-  UNUSED(signum);
-  printf("Signal received!\n");
-  if (uv_signal_stop(handle)) {
-    printf("Unable to stop signal\n");
-  }
-  uv_close((uv_handle_t *)handle, close_signal);
+void
+setup_timers(Context * ctx, uv_loop_t * loop)
+{
+    static uv_timer_t keyboard_timer;
+    static uv_timer_t loadavg_timer;
+    static uv_timer_t display_timer;
+    static uv_timer_t acpi_timer;
+
+    CHECK(uv_timer_init(loop, &keyboard_timer), "uv_timer_init");
+    CHECK(uv_timer_init(loop, &loadavg_timer), "uv_timer_init");
+    CHECK(uv_timer_init(loop, &display_timer), "uv_timer_init");
+    CHECK(uv_timer_init(loop, &acpi_timer), "uv_timer_init");
+
+    acpi_timer.data = context_get(ctx, POW);
+    keyboard_timer.data = ctx;
+    loadavg_timer.data = ctx;
+    display_timer.data = ctx;
+
+    CHECK(uv_timer_start(&loadavg_timer, load_on_timer, 0, 2500),
+	  "uv_timer_start");
+    CHECK(uv_timer_start(&acpi_timer, power_cb, 0, 10000),
+	  "uv_timer_start");
+    CHECK(uv_timer_start(&keyboard_timer, update_on_timer, 0, TIMEOUT),
+	  "uv_timer_start");
+    CHECK(uv_timer_start(&display_timer, update_root, TIMEOUT, TIMEOUT),
+	  "uv_timer_start");
 }
 
-void setup_timers(X *x, Power *p, uv_loop_t **loop) {
-  static uv_timer_t kb;
-  static uv_timer_t la;
-  static uv_timer_t xroot_timer;
-  static uv_timer_t bat_timer;
-  uv_timer_init(*loop, &kb);
-  uv_timer_init(*loop, &la);
-  uv_timer_init(*loop, &xroot_timer);
-  uv_timer_init(*loop, &bat_timer);
-  bat_timer.data = p;
-  kb.data = x;
-  xroot_timer.data = (void *[]){x, p};
-  uv_timer_start(&xroot_timer, update_root, TIMEOUT, 100);
-  uv_timer_start(&la, load_sync, TIMEOUT, 2500);
-  uv_timer_start(&kb, update_layout, TIMEOUT, 100);
-  uv_timer_start(&bat_timer, power_cb, TIMEOUT, 100);
+void
+setup_signals(Context * ctx, uv_loop_t * loop)
+{
+    static uv_signal_t hup;
+    static uv_signal_t usr;
+    static uv_signal_t term;
+
+    CHECK(uv_signal_init(loop, &hup), "uv_signal_init");
+    hup.data = ctx;
+    CHECK(uv_signal_start(&hup, signal_cb, SIGHUP), "uv_signal_start");
+
+    CHECK(uv_signal_init(loop, &usr), "uv_signal_init");
+    usr.data = ctx;
+    CHECK(uv_signal_start(&usr, signal_cb, SIGUSR1), "uv_signal_start");
+
+    CHECK(uv_signal_init(loop, &term), "uv_signal_init");
+    term.data = ctx;
+    CHECK(uv_signal_start(&term, signal_cb, SIGTERM), "uv_signal_start");
 }
 
-void setup_signals(uv_loop_t *loop) {
-  uv_signal_t int_handle;
-  uv_signal_init(loop, &int_handle);
-  CHECK(uv_signal_start(&int_handle, signal_cb, SIGHUP), "signal");
-}
+int
+main(void)
+{
+    Context        *ctx = context_new(CONTEXT_SIZE);
+    if (ctx == NULL) {
+	fprintf(stderr, "context_new: out of memory\n");
+	return 1;
+    }
 
-static void on_recv(uv_udp_t *handle, ssize_t nread, const uv_buf_t *rcvbuf,
-                    const struct sockaddr *addr, unsigned flags) {
-  UNUSED(flags);
-  UNUSED(handle);
-  UNUSED(addr);
+    X              *x = x_open();
+    if (x == NULL) {
+	fprintf(stderr, "x_open: cannot open display\n");
+	context_destroy(ctx);
+	return 1;
+    }
 
-  if (nread > 0) {
-    printf("%lu\n", nread);
-    printf("%s", rcvbuf->base);
-  }
-  printf("free  :%lu %p\n", rcvbuf->len, rcvbuf->base);
-  free(rcvbuf->base);
-}
+    context_putw(ctx, X11, x, destroy_x);
+    context_putw(ctx, POW, power_new(), destroy_power);
+    context_putw(ctx, REP, report_new(), destroy_report);
+    context_putw(ctx, LA, load_new(), destroy_load);
 
-static void on_alloc(uv_handle_t *client, size_t suggested_size,
-                     uv_buf_t *buf) {
-  UNUSED(client);
-  buf->base = malloc(suggested_size);
-  buf->len = suggested_size;
-  printf("malloc:%lu %p\n", buf->len, buf->base);
-}
-void setup_server(uv_loop_t *loop) {
-  int status;
-  static struct sockaddr_in addr;
-  static uv_udp_t server = {0};
-  status = uv_udp_init(loop, &server);
-  CHECK(status, "init");
-  uv_ip4_addr("0.0.0.0", 12345, &addr);
-  status = uv_udp_bind(&server, (const struct sockaddr *)&addr, 0);
-  CHECK(status, "bind");
-  status = uv_udp_recv_start(&server, on_alloc, on_recv);
-  CHECK(status, "recv");
-}
+    if (context_get(ctx, POW) == NULL || context_get(ctx, REP) == NULL
+	|| context_get(ctx, LA) == NULL) {
+	fprintf(stderr, "initialization: out of memory\n");
+	context_destroy(ctx);
+	return 1;
+    }
 
-int main() {
-  uv_loop_t *loop = uv_default_loop();
-  X *x = x_open();
-  Power *pow = power_new(loop);
-  report_new(&report);
-  setup_timers(x, pow, &loop);
-  // setup_server(loop);
-  setup_signals(loop);
-  uv_run(loop, UV_RUN_DEFAULT);
-  x_close(x);
-  power_destroy(pow);
-  report_destroy(&report);
+    uv_loop_t       loop;
+    CHECK(uv_loop_init(&loop), "uv_loop_init");
+    setup_timers(ctx, &loop);
+    setup_signals(ctx, &loop);
+    x_update_layout(x);
+    CHECK(uv_run(&loop, UV_RUN_DEFAULT), "uv_run");
+    context_destroy(ctx);
+    CHECK(uv_loop_close(&loop), "uv_loop_close");
+    return 0;
 }

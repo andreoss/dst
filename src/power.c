@@ -1,109 +1,120 @@
-#include "uv.h"
-#include <error.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "main.h"
 #include "power.h"
-#include <assert.h>
-#include <check.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
-void on_open(uv_fs_t *req) {
-  FILE *fp;
-  char buff[8];
-  char path[256];
-  Power *power = ((Power *)req->data);
-  uv_dirent_t *ent = calloc(sizeof(uv_dirent_t), 1);
-  fprintf(stderr, "%s\n", req->path);
-  while (!uv_fs_scandir_next(req, ent)) {
-    strcpy(path, req->path);
-    strcat(path, ent->name);
-    strcat(path, "/type");
-    fp = fopen(path, "r");
-    fscanf(fp, "%s", buff);
-    fclose(fp);
-    if (strcmp(buff, "Battery") == 0) {
-      strcpy(path, req->path);
-      strcat(path, ent->name);
-      strcat(path, "/capacity");
-      strcpy(power->battery_name, ent->name);
-      fp = fopen(path, "r");
-      assert(fp);
-      assert(power->battery != NULL);
-      fscanf(fp, "%d", &power->battery->capacity);
-      strcpy(path, req->path);
-      strcat(path, ent->name);
-      strcat(path, "/status");
-      strcpy(power->battery_name, ent->name);
-      fp = fopen(path, "r");
-      assert(fp);
-      assert(power->battery != NULL);
-      fscanf(fp, "%s", power->battery->status);
-    } else if (strcmp(buff, "Mains") == 0) {
-      strcpy(path, req->path);
-      strcat(path, ent->name);
-      strcat(path, "/online");
-      fp = fopen(path, "r");
-      assert(fp);
-      assert(power->battery != NULL);
-      fscanf(fp, "%d", &power->online);
-      strcpy(power->ac_name, ent->name);
+static bool
+dst_slurp(const char *path, const char *format,...)
+{
+    FILE           *fp = fopen(path, "r");
+    if (fp == NULL) {
+	return false;
     }
-  }
-  free(ent);
-  fclose(fp);
+    va_list         args;
+    va_start(args, format);
+    int             res = vfscanf(fp, format, args);
+    va_end(args);
+    fclose(fp);
+    return res == 1;
 }
 
-void power_cb(uv_timer_t *h) {
-  Power *p = (Power*)h->data;
-  uv_fs_t req = {.data = p};
-  uv_fs_scandir(h->loop, &req, POWER_SUPPLY, O_RDONLY, on_open);
-  power_print(p, stderr);
+static char    *
+supply_path(char *path, size_t size, const char *base, const char *name,
+	    const char *suffix)
+{
+    int             n = snprintf(path, size, "%s%s%s", base, name, suffix);
+    if (n < 0 || (size_t) n >= size) {
+	return NULL;
+    }
+    return path;
 }
 
-Power *power_new(uv_loop_t *loop) {
-  Power *p = calloc(sizeof(Power), 1);
-  p->req = calloc(sizeof(uv_fs_t), 1);
-  p->battery = calloc(sizeof(Battery), 1);
-  p->battery->status = calloc(sizeof(char), 16);
-  p->battery_name = calloc(sizeof(char), 8);
-  p->ac_name = calloc(sizeof(char), 8);
-  return p;
+void
+power_req_handle(uv_fs_t * req)
+{
+    assert(req->path);
+    Power          *power = req->data;
+    uv_dirent_t     ent = { 0 };
+    char            path[PATH_MAX];
+    char            type[16];
+
+    power->online = 0;
+    power->ac_name[0] = '\0';
+    power->battery_name[0] = '\0';
+    power->battery.capacity = 0;
+    power->battery.status[0] = '\0';
+
+    while (!uv_fs_scandir_next(req, &ent)) {
+	if (supply_path(path, sizeof(path), req->path, ent.name, "/type")
+	    == NULL) {
+	    continue;
+	}
+	if (!dst_slurp(path, "%15s", type)) {
+	    continue;
+	}
+	if (strcmp(type, "Battery") == 0) {
+	    snprintf(power->battery_name, sizeof(power->battery_name), "%s",
+		     ent.name);
+	    if (supply_path(path, sizeof(path), req->path, ent.name,
+			    "/capacity") != NULL) {
+		dst_slurp(path, "%d", &power->battery.capacity);
+	    }
+	    if (supply_path(path, sizeof(path), req->path, ent.name,
+			    "/status") != NULL) {
+		dst_slurp(path, "%31s", power->battery.status);
+	    }
+	} else if (strcmp(type, "Mains") == 0) {
+	    snprintf(power->ac_name, sizeof(power->ac_name), "%s", ent.name);
+	    if (supply_path(path, sizeof(path), req->path, ent.name,
+			    "/online") != NULL) {
+		dst_slurp(path, "%d", &power->online);
+	    }
+	}
+    }
+    uv_fs_req_cleanup(req);
 }
 
-void power_destroy(Power *p) {
-  uv_fs_req_cleanup(p->req);
-  free(p->req);
-  free(p->battery);
-  free(p->battery_name);
-  free(p->ac_name);
+void
+power_cb(uv_timer_t * h)
+{
+    static uv_fs_t  req;
+    req.data = h->data;
+    uv_fs_scandir(h->loop, &req, POWER_SUPPLY, O_RDONLY, power_req_handle);
 }
 
-void power_str(Power *p, char *out) {
-  sprintf(out, "%s %s | %s %s %d", p->ac_name, p->online ? "On" : "Off",
-          p->battery_name, p->battery->status, p->battery->capacity);
+Power          *
+power_new(void)
+{
+    return calloc(1, sizeof(Power));
 }
-void power_print(Power *p, FILE *out) {
-  fprintf(out, "%s ", p->ac_name);
-  fprintf(out, "%s |", p->online ? "On" : "Off");
-  if (p->battery != NULL) {
-    fprintf(out, "%s ", p->battery_name);
-    fprintf(out, "%s ", p->battery->status);
-    fprintf(out, "%d ", p->battery->capacity);
-  }
-  fprintf(out, "\n");
+
+void
+power_destroy(Power * p)
+{
+    free(p);
 }
-/* int main() { */
-/*   uv_loop_t *loop = uv_default_loop(); */
-/*   Power *power = power_new(loop); */
-/*   uv_run(loop, UV_RUN_DEFAULT); */
-/*   power_print(power, stdout); */
-/*   power_destroy(power); */
-/* } */
+
+void
+power_str(Power * p, char *out, size_t size)
+{
+    if (p == NULL || out == NULL || size == 0) {
+	return;
+    }
+    snprintf(out, size, "%s %s | %s %s %d", p->ac_name,
+	     p->online ? "On" : "Off", p->battery_name,
+	     p->battery.status, p->battery.capacity);
+}
+
+void
+power_print(Power * p, FILE * out)
+{
+    char            buf[192];
+    power_str(p, buf, sizeof(buf));
+    fputs(buf, out);
+}

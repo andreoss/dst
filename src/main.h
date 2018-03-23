@@ -1,20 +1,14 @@
 #pragma once
-#define UNUSED(x) (void)(x)
-#define TIMEOUT 1000
-#define CHECK(r, msg)                                                          \
-  if (r < 0) {                                                                 \
-    fprintf(stderr, "%s: %s\n", msg, uv_strerror(r));                          \
-    exit(1);                                                                   \
-  }
+#include <stdio.h>
+#include <stdlib.h>
+#include <uv.h>
 
-
-typedef struct {
-  double _1m;
-  double _5m;
-  double _15m;
-} Load;
-
-typedef struct {
-  char *current;
-  char *pending;
-} Report;
+#define TIMEOUT 100
+#define CHECK(expr, msg)                                                       \
+  do {                                                                         \
+    int check_result = (expr);                                                 \
+    if (check_result < 0) {                                                    \
+      fprintf(stderr, "%s: %s\n", msg, uv_strerror(check_result));             \
+      exit(1);                                                                 \
+    }                                                                          \
+  } while (0)
