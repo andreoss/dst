@@ -1,6 +1,7 @@
 # dst
+[![Build Status](https://travis-ci.com/andreoss/dst.svg?branch=master)](https://travis-ci.com/andreoss/dst)
 
-Single-process scalable dynamic system monitor for dwm (and others) based upon libuv.
+Single-pid scalable dynamic system monitor for dwm (and others) based upon libuv.
 
 ## Dependencies
 - libuv
