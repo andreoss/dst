@@ -55,8 +55,6 @@ void read_diskstats(const char *diskstats, io_stats_t *dev) {
     if (minor) {
       continue;
     }
-
-    fprintf(stderr, "%s\n", dev_name);
     if (i >= 14) {
       dev->rd_sectors = rd_sec_or_wr_ios;
       dev->wr_sectors = wr_sec;
