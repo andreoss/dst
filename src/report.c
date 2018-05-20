@@ -9,7 +9,7 @@ struct report_s {
 };
 Report *report_new() {
   Report *rep = calloc(1, sizeof(Report));
-  rep->size = 80;
+  rep->size = 256;
   rep->current = calloc(rep->size, sizeof(char));
   rep->pending = calloc(rep->size, sizeof(char));
   return rep;
