@@ -33,6 +33,9 @@ void x_update_layout(X *x) {
     for (int i = 0; i < state.group; i++) {
       l = strtok(NULL, ",");
     }
+    if (l == NULL) {
+      l = "??";
+    }
     strcpy(x->xkb_layout, l);
     free(vd.model);
     free(vd.layout);
