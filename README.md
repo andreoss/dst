@@ -1,15 +1,16 @@
 # dst
-[![Build Status](https://travis-ci.com/andreoss/dst.svg?branch=master)](https://travis-ci.com/andreoss/dst)
 
-Single-pid scalable dynamic system monitor for dwm (and others) based upon libuv.
+Dynamic system monitor for dwm (and other X11 window managers), based on libuv.
 
 ## Usage
 
-dst periodically updates name of X11's root window with a report line.
+`dst` periodically updates the name of the X11 root window with a report line.
 
-For [dwm](https://dwm.suckless.org/ "dwm") it's just enough to have a dst process started.
+For [dwm](https://dwm.suckless.org/ "dwm") it is enough to have a `dst` process
+started.
 
-For [stumpwm](https://stumpwm.github.io/ "stumpwm") `root-name` should be added in `*screen-mode-line-format*` explicitly.
+For [stumpwm](https://stumpwm.github.io/ "stumpwm") `root-name` should be added
+in `*screen-mode-line-format*` explicitly.
 
 ```lisp
 (setf *screen-mode-line-format*
@@ -25,31 +26,38 @@ For [stumpwm](https://stumpwm.github.io/ "stumpwm") `root-name` should be added 
 ```
 
 ## Dependencies
+
 - libuv
-- xkbfile
+- libX11
+- libxkbfile
+- cmocka (tests)
 
-## Compile
-On Nix
+## Build
+
+With Nix:
+
 ```
-nix-build .
+nix build .
 ```
 
-Elsewhere
+With CMake:
+
 ```
-$ cmake .
-$ make
-$ make test
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
 ## Install
 
-On Nix
+With Nix:
+
 ```
-nix-env -i dst-dev -f default.nix
+nix profile install .
 ```
 
-Elsewhere
-```
-make install
+With CMake:
 
+```
+cmake --install build
 ```
