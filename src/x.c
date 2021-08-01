@@ -53,5 +53,5 @@ void x_update_layout(X *x) {
 }
 
 void x_layout(X *x, char *buff) {
-  strcpy(x->layout, buff);
+  sprintf(buff, "%s", x->layout);
 }
