@@ -11,7 +11,6 @@ struct Context {
 
 };
 
-
 void* context_get(Context *ctx, size_t pos) {
   assert(ctx);
   assert(ctx->size > pos);

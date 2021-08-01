@@ -1,5 +1,5 @@
 #include <stdlib.h>
-enum { POW = 0, X11 = 1, REP = 2, LA = 3 };
+enum { POW = 0, X11 = 1, REP = 2, LOADAVG = 3 };
 
 #define CALLBACK (void(*)(void*))
 typedef void (callback_t)(void*);

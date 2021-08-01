@@ -85,9 +85,15 @@ void power_destroy(Power *p) {
 }
 
 void power_str(Power *p, char *out) {
-  sprintf(out, "%s %s | %s %s %d", p->ac_name, p->online ? "On" : "Off",
+  if(p->online && p->battery->capacity > 95) {
+    sprintf(out, "%s", "");
+  }
+  else {
+    sprintf(out, "%s %s | %s %s %d", p->ac_name, p->online ? "On" : "Off",
           p->battery_name, p->battery->status, p->battery->capacity);
+  }
 }
+
 void power_print(Power *p, FILE *out) {
   char buf[128];
   power_str(p, buf);

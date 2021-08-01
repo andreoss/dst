@@ -1,7 +1,15 @@
 #include "x.h"
+
+struct display_s {
+  Display *dpy;
+  Window root;
+  int screen;
+  char *layout;
+};
+
 X *x_open() {
   X *x = (X*)calloc(sizeof(X), 1);
-  x->xkb_layout = calloc(sizeof(char), 16);
+  x->layout = calloc(sizeof(char), 16);
   x->dpy = XOpenDisplay(NULL);
   if (x->dpy == NULL) {
     error(1, 0, "Cannot open display\n");
@@ -13,7 +21,7 @@ X *x_open() {
 
 void x_close(X *x) {
   XCloseDisplay(x->dpy);
-  free(x->xkb_layout);
+  free(x->layout);
   free(x);
 }
 
@@ -36,10 +44,14 @@ void x_update_layout(X *x) {
     if (l == NULL) {
       l = "??";
     }
-    strcpy(x->xkb_layout, l);
+    strcpy(x->layout, l);
     free(vd.model);
     free(vd.layout);
     free(vd.variant);
     free(vd.options);
   }
+}
+
+void x_layout(X *x, char *buff) {
+  strcpy(x->layout, buff);
 }
