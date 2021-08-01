@@ -37,7 +37,7 @@ void
 load_on_timer(uv_timer_t * timer)
 {
     Context        *ctx = timer->data;
-    load_update(context_get(ctx, LA));
+    load_update(context_get(ctx, LOADAVG));
 }
 
 void

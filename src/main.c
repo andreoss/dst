@@ -54,11 +54,11 @@ update_root(uv_timer_t * handle)
     X              *x = context_get(ctx, X11);
     Power          *pow = context_get(ctx, POW);
     Report         *report = context_get(ctx, REP);
-    Load           *load = context_get(ctx, LA);
+    Load           *load = context_get(ctx, LOADAVG);
 
     load_str(load, la, sizeof(la));
     power_str(pow, bat, sizeof(bat));
-    snprintf(layout, sizeof(layout), "%s", x->xkb_layout);
+    x_layout(x, layout, sizeof(layout));
     snprintf(buf, sizeof(buf), "%s | %s %s", bat, la, layout);
     report_pend(report, buf);
     update_status(x, report);
@@ -152,10 +152,10 @@ main(void)
     context_putw(ctx, X11, x, destroy_x);
     context_putw(ctx, POW, power_new(), destroy_power);
     context_putw(ctx, REP, report_new(), destroy_report);
-    context_putw(ctx, LA, load_new(), destroy_load);
+    context_putw(ctx, LOADAVG, load_new(), destroy_load);
 
     if (context_get(ctx, POW) == NULL || context_get(ctx, REP) == NULL
-	|| context_get(ctx, LA) == NULL) {
+	|| context_get(ctx, LOADAVG) == NULL) {
 	fprintf(stderr, "initialization: out of memory\n");
 	context_destroy(ctx);
 	return 1;

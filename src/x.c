@@ -6,6 +6,13 @@
 
 #include "x.h"
 
+struct display_s {
+    Display        *dpy;
+    Window          root;
+    int             screen;
+    char            layout[64];
+};
+
 X              *
 x_open(void)
 {
@@ -43,6 +50,16 @@ x_setname(X * x, const char *s)
     XSync(x->dpy, False);
 }
 
+char           *
+x_getname(X * x)
+{
+    char           *s = NULL;
+    if (x == NULL || !XFetchName(x->dpy, x->root, &s)) {
+	return NULL;
+    }
+    return s;
+}
+
 void
 x_update_layout(X * x)
 {
@@ -61,9 +78,18 @@ x_update_layout(X * x)
     for (int i = 0; i < state.group && l != NULL; i++) {
 	l = strtok(NULL, ",");
     }
-    snprintf(x->xkb_layout, sizeof(x->xkb_layout), "%s", l ? l : "??");
+    snprintf(x->layout, sizeof(x->layout), "%s", l ? l : "??");
     free(vd.model);
     free(vd.layout);
     free(vd.variant);
     free(vd.options);
+}
+
+void
+x_layout(X * x, char *buff, size_t size)
+{
+    if (x == NULL || buff == NULL || size == 0) {
+	return;
+    }
+    snprintf(buff, size, "%s", x->layout);
 }
