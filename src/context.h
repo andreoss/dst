@@ -1,7 +1,7 @@
 #pragma once
 #include <stddef.h>
 
-enum { POW = 0, X11 = 1, REP = 2, LA = 3, CONTEXT_SIZE = 4 };
+enum { POW = 0, X11 = 1, REP = 2, LOADAVG = 3, CONTEXT_SIZE = 4 };
 
 typedef void    (callback_t) (void *);
 

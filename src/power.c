@@ -106,6 +106,10 @@ power_str(Power * p, char *out, size_t size)
     if (p == NULL || out == NULL || size == 0) {
 	return;
     }
+    if (p->online && p->battery.capacity > 95) {
+	out[0] = '\0';
+	return;
+    }
     snprintf(out, size, "%s %s | %s %s %d", p->ac_name,
 	     p->online ? "On" : "Off", p->battery_name,
 	     p->battery.status, p->battery.capacity);
