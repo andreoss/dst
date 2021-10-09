@@ -24,7 +24,7 @@ FILE *dst_fopen(const char *path, const char *mode) {
 }
 void dst_slurp(const char *path, const char *format, void *ptr) {
   FILE *fp = dst_fopen(path, "r");
-  int res = fscanf(fp, format, ptr);
+  int res = fscanf(fp, format, (char*) ptr);
   assert(res == 1);
   fclose(fp);
 }
