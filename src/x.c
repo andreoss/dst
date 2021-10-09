@@ -27,8 +27,8 @@ void x_update_layout(X *x) {
   XkbStateRec state;
   XkbRF_VarDefsRec vd;
   XkbGetState(x->dpy, XkbUseCoreKbd, &state);
-  char *l;
   if (XkbRF_GetNamesProp(x->dpy, NULL, &vd)) {
+    char *l;
     l = strtok(vd.layout, ",");
     for (int i = 0; i < state.group; i++) {
       l = strtok(NULL, ",");
