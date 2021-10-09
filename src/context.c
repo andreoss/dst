@@ -3,14 +3,11 @@
 #include <stdio.h>
 #include "context.h"
 
-
 struct Context {
   size_t size;
   void** data;
   callback_t** destroyers;
-
 };
-
 
 void* context_get(Context *ctx, size_t pos) {
   assert(ctx);
@@ -20,7 +17,7 @@ void* context_get(Context *ctx, size_t pos) {
 
 Context *context_new() {
   size_t s = 5;
-  Context *ctx = (Context*)calloc(100, sizeof(Context*));
+  Context *ctx = (Context*)calloc(100, sizeof(Context));
   ctx->size = s;
   ctx->data = calloc(s, sizeof(void*));
   ctx->destroyers = calloc(s, sizeof(callback_t*));
