@@ -23,6 +23,11 @@ void x_setname(X *x, const char *s) {
   XSync(x->dpy, x->screen);
 }
 
+void x_getname(X *x, char **s) {
+  assert(s);
+  XFetchName(x->dpy, x->root, s);
+}
+
 void x_update_layout(X *x) {
   XkbStateRec state;
   XkbRF_VarDefsRec vd;

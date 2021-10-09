@@ -19,3 +19,4 @@ void x_close(X *x);
 void x_update_layout(X *x);
 
 void x_setname(X *x, const char *s) ;
+void x_getname(X *x, char **s) ;
