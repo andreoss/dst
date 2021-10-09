@@ -32,7 +32,6 @@ void read_diskstats(const char *diskstats, io_stats_t *dev) {
   assert(dev);
   FILE *fp;
   char line[256], dev_name[32];
-  size_t i;
   uint64_t rd_sec_or_wr_ios;
   uint64_t wr_sec;
   uint32_t dc_sec;
@@ -44,6 +43,7 @@ void read_diskstats(const char *diskstats, io_stats_t *dev) {
   }
   uint8_t minor, major;
   while (fgets(line, sizeof(line), fp) != NULL) {
+    size_t i;
     /* major minor name rio rmerge rsect ruse wio wmerge wsect wuse running use
      * aveq dcio dcmerge dcsect dcuse flio fltm */
     i = sscanf(line,
