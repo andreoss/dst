@@ -36,7 +36,7 @@ void load_update(Load *load) {
 }
 
 bool load_cmp(Load *load, double tt) {
-  return load->curr[0] > tt || load->curr[1] > tt || load->curr[1] > tt;
+  return load->curr[0] > tt || load->curr[1] > tt || load->curr[2] > tt;
 }
 
 void load_str(Load *load, char *buff) {
