@@ -67,3 +67,13 @@ x_update_layout(X * x)
     free(vd.variant);
     free(vd.options);
 }
+
+char           *
+x_getname(X * x)
+{
+    char           *s = NULL;
+    if (x == NULL || !XFetchName(x->dpy, x->root, &s)) {
+	return NULL;
+    }
+    return s;
+}

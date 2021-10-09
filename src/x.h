@@ -13,4 +13,5 @@ typedef struct {
 X              *x_open(void);
 void            x_close(X * x);
 void            x_update_layout(X * x);
+char           *x_getname(X * x);
 void            x_setname(X * x, const char *s);
