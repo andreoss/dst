@@ -61,9 +61,9 @@ void power_req_handle(uv_fs_t *req) {
 }
 
 void power_cb(uv_timer_t *h) {
-  uv_fs_t *req = calloc(sizeof(uv_fs_t), 1);
-  req->data = h->data;
-  uv_fs_scandir(h->loop, req, POWER_SUPPLY, O_RDONLY, power_req_handle);
+  static uv_fs_t req;//  = calloc(sizeof(uv_fs_t), 1);
+  req.data = h->data;
+  uv_fs_scandir(h->loop, &req, POWER_SUPPLY, O_RDONLY, power_req_handle);
 }
 
 Power *power_new() {
