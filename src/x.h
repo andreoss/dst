@@ -9,9 +9,9 @@
 
 typedef struct display_s X;
 
-X* x_open();
-void x_close(X *x);
-void x_update_layout(X *x);
-void x_setname(X *x, const char *s) ;
-void x_getname(X *x, char **s) ;
-void x_layout(X *x, char *buff);
+X              *x_open();
+void            x_close(X * x);
+void            x_update_layout(X * x);
+void            x_setname(X * x, const char *s);
+void            x_getname(X * x, char **s);
+void            x_layout(X * x, char *buff);

@@ -17,24 +17,24 @@
 #define POWER_SUPPLY "/sys/class/power_supply/"
 
 typedef struct {
-  char* status;
-  int capacity;
+    char           *status;
+    int             capacity;
 } Battery;
 
 typedef struct {
-  int online;
-  Battery *battery;
-  char *ac_name;
-  char *battery_name;
-  uv_fs_t *req;
+    int             online;
+    Battery        *battery;
+    char           *ac_name;
+    char           *battery_name;
+    uv_fs_t        *req;
 } Power;
 
-void on_open(uv_fs_t *req);
+void            on_open(uv_fs_t * req);
 
-Power *power_new();
+Power          *power_new();
 
-void power_destroy(Power *p);
+void            power_destroy(Power * p);
 
-void power_print(Power *p, FILE *out);
-void power_str(Power *p, char *out);
-void power_cb(uv_timer_t *h);
+void            power_print(Power * p, FILE * out);
+void            power_str(Power * p, char *out);
+void            power_cb(uv_timer_t * h);
