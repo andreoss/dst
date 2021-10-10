@@ -32,12 +32,27 @@ status_is_truncated(void **state)
     power_destroy(p);
 }
 
+static void
+full_battery_is_hidden(void **state)
+{
+    (void) state;
+    Power          *p = power_new();
+    assert_non_null(p);
+    p->online = 1;
+    p->battery.capacity = 100;
+    char            buf[16];
+    power_str(p, buf, sizeof(buf));
+    assert_string_equal(buf, "");
+    power_destroy(p);
+}
+
 int
 main(void)
 {
     const struct CMUnitTest tests[] = {
 	cmocka_unit_test(new_and_destroy),
 	cmocka_unit_test(status_is_truncated),
+	cmocka_unit_test(full_battery_is_hidden)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
