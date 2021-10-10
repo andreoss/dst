@@ -49,7 +49,7 @@ update_root(uv_timer_t * handle)
     char            bat[128];
     char            buf[512];
     char            la[96];
-    char            layout[64];
+    char            layout[32];
     Context        *ctx = handle->data;
     X              *x = context_get(ctx, X11);
     Power          *pow = context_get(ctx, POW);
