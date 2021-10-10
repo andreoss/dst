@@ -23,8 +23,8 @@ void
 update_status(X * x, Report * report)
 {
     if (report_is_unsynced(report)) {
-	report_pop(report);
-	x_setname(x, report_current(report));
+        report_pop(report);
+        x_setname(x, report_current(report));
     }
 }
 
@@ -110,7 +110,7 @@ create_loop()
 {
     uv_loop_t      *loop = malloc(sizeof(uv_loop_t));
     if (loop) {
-	uv_loop_init(loop);
+        uv_loop_init(loop);
     }
     return loop;
 }
